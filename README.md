@@ -49,10 +49,6 @@ Depth-first-search (DFS) is a well known graph algorithm that explores all nodes
 - If you are on a linux machine, locate your default browser on your dock and click on it. It should be highlighted.
 - You will then be welcomed by a login screen
 - To safely close the program use the close button located on the top right side of your default browser
-## Proof of Work
-- To view PoW video locate the folder titled "Recording Proof"
-- Double left click on that folder
-- Double left click on the .mvk file inside that folder and the video should start playing
 ## SQL Script
 To view the SQL script, locate the folder titled "SQL_Scripts" and:
 - Double left click on that folder
@@ -60,8 +56,3 @@ To view the SQL script, locate the folder titled "SQL_Scripts" and:
 - Drag and drog it into visual studio (once VS is open)
 - Click on the green run button located on the left top side or press following shortcut simultaneously (Ctrl + Shift + E)
 - Wait for it to complete executing and run the project again.
-### Side Notes
-- Due to compression and recording software, the colours palatte on the video does not perfectly reflect the colours of the original source
- But its good enough to get an idea
-- If your machine does not support .mkv files, download VLC from here: https://www.videolan.org/vlc/
-- Alternatively, use a .mkv to .mp4 converter such as FreeConvert, available here: https://www.freeconvert.com/mkv-to-mp4
