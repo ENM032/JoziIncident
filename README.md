@@ -53,10 +53,6 @@ Depth-first-search (DFS) is a well known graph algorithm that explores all nodes
 - To view PoW video locate the folder titled "Recording Proof"
 - Double left click on that folder
 - Double left click on the .mvk file inside that folder and the video should start playing
-## Report
-To view the Report, locate the folder titled "Report" and:
-- Double left click on that folder
-- Double left click on the PDF file titled, "ST10091324_PROG7312_Part3"
 ## SQL Script
 To view the SQL script, locate the folder titled "SQL_Scripts" and:
 - Double left click on that folder
