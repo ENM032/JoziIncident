@@ -1,0 +1,145 @@
+﻿<Page x:Class="ST10091324_PROG7312_Part1.Views.LocalEvents"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+      xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+      xmlns:local="clr-namespace:ST10091324_PROG7312_Part1.Views" 
+      xmlns:Icon="http://metro.mahapps.com/winfx/xaml/iconpacks"
+      mc:Ignorable="d" 
+      d:DesignHeight="450" d:DesignWidth="800"
+      Title="LocalEvents"
+      Background="#eff2f7"
+      FontSize="18">
+
+    <Page.Resources>
+        <!-- Shadow Effect for Cards -->
+        <DropShadowEffect x:Key="ShadowEffect" Color="#000000" BlurRadius="10" ShadowDepth="2" Opacity="0.2" />
+    </Page.Resources>
+
+    <Grid>
+        <StackPanel>
+            <!-- Horizontal StackPanel for Filters -->
+            <StackPanel Orientation="Horizontal">
+                <!-- Category ComboBox for selecting event categories -->
+                <ComboBox Name="CategoryComboBox" SelectionChanged="CategoryComboBox_SelectionChanged" MaxWidth="200" 
+                      materialDesign:HintAssist.Hint="Filter by category"
+                      Style="{StaticResource MaterialDesignOutlinedComboBox}" />
+                <!-- End of Category ComboBox -->
+
+                <!-- Start Date Picker for filtering events -->
+                <DatePicker Name="StartDatePicker" SelectedDateChanged="StartDatePicker_SelectedDateChanged" 
+                        VerticalContentAlignment="Center" BorderThickness="0" 
+                        Style="{StaticResource MaterialDesignFloatingHintDatePicker}"
+                        materialDesign:HintAssist.Hint="From:" Margin="10" />
+                <!-- End of Start Date Picker -->
+
+                <!-- End Date Picker for filtering events -->
+                <DatePicker Name="EndDatePicker" SelectedDateChanged="EndDatePicker_SelectedDateChanged" 
+                        VerticalContentAlignment="Center" BorderThickness="0"
+                        Style="{StaticResource MaterialDesignFloatingHintDatePicker}" 
+                        materialDesign:HintAssist.Hint="To:" Margin="10" />
+                <!-- End of End Date Picker -->
+
+                <!-- Reset Button to clear filters -->
+                <Button Name="ResetFiltersButton" Content="Reset Filters" Click="ResetFiltersButton_Click" 
+                    Margin="10,7,0,0" Style="{StaticResource MaterialDesignPaperButton}" />
+                <!-- End of Reset Button -->
+            </StackPanel>
+            <!-- End of Filters StackPanel -->
+
+            <!-- TextBlock indicating the section for upcoming events -->
+            <TextBlock x:Name="UpcomingEventsHeader" Text="Upcoming Events &amp; Announcements" FontWeight="Bold" FontSize="20" Margin="10 0 0 0" />
+            <!-- End of upcoming TextBlock -->
+
+            <!-- ScrollViewer for displaying the list of events -->
+            <ScrollViewer x:Name="EventScrollViewer" VerticalScrollBarVisibility="Auto" Height="250" Padding="10">
+                <ItemsControl Name="EventsList" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <!-- Border for each event item with shadow effect -->
+                            <Border Margin="0 0 0 10" Padding="10" Background="White" CornerRadius="8"
+                                Effect="{StaticResource ShadowEffect}" BorderBrush="#E0E0E0" BorderThickness="1">
+                                <StackPanel Orientation="Horizontal">
+                                    <!-- Event image -->
+                                    <Image Source="{Binding ImageUrl}" Height="100" Width="100" Stretch="Uniform" Margin="0,0,10,0" />
+                                    <!-- End of Event Image -->
+
+                                    <StackPanel>
+                                        <!-- Event title -->
+                                        <TextBlock FontWeight="Bold" Text="{Binding Title}" />
+                                        <!-- End of Event Title -->
+
+                                        <!-- Event category -->
+                                        <TextBlock FontWeight="SemiBold" Text="{Binding Category}" FontSize="15"/>
+                                        <!-- End of Event Category -->
+
+                                        <!-- Event description -->
+                                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap" FontSize="14" Foreground="#667" MaxWidth="500" />
+                                        <!-- End of Event Description -->
+
+                                        <!-- Event date formatted -->
+                                        <TextBlock Text="{Binding Date, StringFormat='{}{0:MMMM dd, yyyy}'}" FontSize="16"/>
+                                        <!-- End of Event Date -->
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                            <!-- End of Event Item Border -->
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+            <!-- End of Events ScrollViewer -->
+
+            <!-- Recommendations Section -->
+            
+            <!-- TextBlock indicating the section for recommended events -->
+            <TextBlock x:Name="RecommendationsHeader" Text="Recommended Events &amp; Announcements" FontWeight="Bold" FontSize="20" Margin="10 10 0 5" 
+                   Visibility="{Binding IsRecommendationsVisible, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+            <!-- End of Recommendations TextBlock -->
+
+            <!-- ScrollViewer for displaying the list of recommendations -->
+            <ScrollViewer x:Name="RecommendationsScrollViewer" VerticalScrollBarVisibility="Auto" Height="150" Padding="10"
+                       Visibility="{Binding IsRecommendationsVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <ItemsControl Name="RecommendationsList" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <!-- Border for each recommendation item with shadow effect -->
+                            <Border Margin="0 0 0 10" Padding="10" Background="White" CornerRadius="8" 
+                                Effect="{StaticResource ShadowEffect}" BorderBrush="#E0E0E0" BorderThickness="1">
+                                <StackPanel Orientation="Horizontal">
+                                    <!-- Recommendation image -->
+                                    <Image Source="{Binding ImageUrl}" Height="100" Width="100" Stretch="Uniform" Margin="0,0,10,0" />
+                                    <!-- End of Recommendation Image -->
+
+                                    <StackPanel>
+                                        <!-- Recommendation title -->
+                                        <TextBlock FontWeight="Bold" Text="{Binding Title}" />
+                                        <!-- End of Recommendation Title -->
+
+                                        <!-- Recommendation category -->
+                                        <TextBlock FontWeight="SemiBold" Text="{Binding Category}" FontSize="15"/>
+                                        <!-- End of Recommendation Category -->
+
+                                        <!-- Recommendation description -->
+                                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap" FontSize="14" Foreground="#667" MaxWidth="500" />
+                                        <!-- End of Recommendation Description -->
+
+                                        <!-- Recommendation date formatted -->
+                                        <TextBlock Text="{Binding Date, StringFormat='{}{0:MMMM dd, yyyy}'}" FontSize="16"/>
+                                        <!-- End of Recommendation Date -->
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                            <!-- End of Recommendation Item Border -->
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+            <!-- End of Recommendations ScrollViewer -->
+        </StackPanel>
+        <!-- End of Main StackPanel -->
+    </Grid>
+    <!-- End of Grid -->
+
+</Page>

@@ -1,0 +1,257 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
+
+    <!--
+        The code for the styling below was taken from a YouTube video
+        Titled: C# WPF UI | How to Design Flat Data Table Dashboard in WPF (Customize Datagrid)
+        Link: https://www.youtube.com/watch?v=mlmyFXJy8gQ
+    -->
+    <Style x:Key="topButton" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="#6e7783"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Width" Value="30"/>
+        <Setter Property="Height" Value="30"/>
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}" CornerRadius="50">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="#dcdcdc"/>
+            </Trigger>
+        </Style.Triggers>
+
+    </Style>
+
+    <!--
+        The code for the styling below was taken from a YouTube video
+        Titled: C# WPF UI | How to Design Flat Data Table Dashboard in WPF (Customize Datagrid)
+        Link: https://www.youtube.com/watch?v=mlmyFXJy8gQ
+    -->
+    <Style x:Key="menuButton" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Height" Value="35"/>
+        <Setter Property="Margin" Value="15 3"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}" CornerRadius="7">
+                        <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="White"/>
+                <Setter Property="Foreground" Value="Black"/>
+            </Trigger>
+        </Style.Triggers>
+
+    </Style>
+
+    <!--
+        The code for the styling below was taken from a YouTube video
+        Titled: C# WPF UI | How to Design Flat Data Table Dashboard in WPF (Customize Datagrid)
+        Link: https://www.youtube.com/watch?v=mlmyFXJy8gQ
+    -->
+    <Style x:Key="menuButtonIcon" TargetType="materialDesign:PackIcon">
+        <Setter Property="Width" Value="15"/>
+        <Setter Property="Height" Value="15"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="20 2 20 0"/>
+    </Style>
+
+    <!--
+        The code for the styling below was taken from a YouTube video
+        Titled: C# WPF UI | How to Design Flat Data Table Dashboard in WPF (Customize Datagrid)
+        Link: https://www.youtube.com/watch?v=mlmyFXJy8gQ
+    -->
+    <Style x:Key="textBoxSearch" TargetType="TextBox">
+        <Setter Property="Background" Value="#ffffff"/>
+        <Setter Property="Foreground" Value="#b0b9c6"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontSize" Value="12 "/>
+        <Setter Property="Padding" Value="15 10"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="0 10"/>
+        
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBoxBase">
+                    <Border x:Name="border" CornerRadius="20" Background="{TemplateBinding Background}" SnapsToDevicePixels="True"
+                            BorderThickness="1" BorderBrush="#e0e6ed">
+                        <Grid>
+                            <ScrollViewer x:Name="PART_ContentHost" Focusable="False" HorizontalScrollBarVisibility="Hidden"
+                                      VerticalScrollBarVisibility="Hidden"/>
+
+                        </Grid>
+                    </Border>
+
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="BorderBrush" Value="#d9d9d9" TargetName="border" />
+                        </Trigger>
+
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter Property="BorderBrush" Value="#d9d9d9" TargetName="border" />
+                        </Trigger>
+
+                    </ControlTemplate.Triggers>
+
+                </ControlTemplate>
+
+            </Setter.Value>
+        </Setter>
+
+        <!-- https://www.youtube.com/watch?v=hc5JicR7A2o -->
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border x:Name="border" CornerRadius="20" Background="{TemplateBinding Background}" SnapsToDevicePixels="True"
+                            BorderThickness="1" BorderBrush="#e0e6ed">
+                        <Grid>
+                            <ScrollViewer x:Name="PART_ContentHost" Focusable="False" HorizontalScrollBarVisibility="Hidden"
+                                      VerticalScrollBarVisibility="Hidden"/>
+                            <TextBlock x:Name="searchHint" Foreground="#b0b9c6" Text="Search for incident by ID..." 
+                                       FontSize="{TemplateBinding FontSize}"
+                                       FontFamily="{TemplateBinding FontFamily}"
+                                       VerticalAlignment="Center"
+                                       Margin="20 0"
+                                       Visibility="Collapsed"/>
+                        </Grid>
+                    </Border>
+
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="Text" Value="">
+                            <Setter Property="Visibility" TargetName="searchHint" Value="Visible"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        
+    </Style>
+
+    <!--
+        The code for the styling below was taken from a YouTube video
+        Titled: C# WPF UI | How to Design Flat Data Table Dashboard in WPF (Customize Datagrid)
+        Link: https://www.youtube.com/watch?v=mlmyFXJy8gQ
+    -->
+    <Style x:Key="requestBoxSearch" TargetType="TextBox">
+        <Setter Property="Background" Value="#ffffff"/>
+        <Setter Property="Foreground" Value="#b0b9c6"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="FontSize" Value="12 "/>
+        <Setter Property="Padding" Value="15 10"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="0 10"/>
+
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBoxBase">
+                    <Border x:Name="border" CornerRadius="20" Background="{TemplateBinding Background}" SnapsToDevicePixels="True"
+                            BorderThickness="1" BorderBrush="#e0e6ed">
+                        <Grid>
+                            <ScrollViewer x:Name="PART_ContentHost" Focusable="False" HorizontalScrollBarVisibility="Hidden"
+                                      VerticalScrollBarVisibility="Hidden"/>
+
+                        </Grid>
+                    </Border>
+
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="BorderBrush" Value="#d9d9d9" TargetName="border" />
+                        </Trigger>
+
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter Property="BorderBrush" Value="#d9d9d9" TargetName="border" />
+                        </Trigger>
+
+                    </ControlTemplate.Triggers>
+
+                </ControlTemplate>
+
+            </Setter.Value>
+        </Setter>
+
+        <!-- https://www.youtube.com/watch?v=hc5JicR7A2o -->
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border x:Name="border" CornerRadius="20" Background="{TemplateBinding Background}" SnapsToDevicePixels="True"
+                            BorderThickness="1" BorderBrush="#e0e6ed">
+                        <Grid>
+                            <ScrollViewer x:Name="PART_ContentHost" Focusable="False" HorizontalScrollBarVisibility="Hidden"
+                                      VerticalScrollBarVisibility="Hidden"/>
+                            <TextBlock x:Name="searchHint" Foreground="#b0b9c6" Text="Search for service request by ID..." 
+                                       FontSize="{TemplateBinding FontSize}"
+                                       FontFamily="{TemplateBinding FontFamily}"
+                                       VerticalAlignment="Center"
+                                       Margin="20 0"
+                                       Visibility="Collapsed"/>
+                        </Grid>
+                    </Border>
+
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="Text" Value="">
+                            <Setter Property="Visibility" TargetName="searchHint" Value="Visible"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+
+    </Style>
+
+    <!--
+        The code for the styling below was modified and implemented from a YouTube video
+        Titled: C# WPF UI | How to Design Flat Data Table Dashboard in WPF (Customize Datagrid)
+        Link: https://www.youtube.com/watch?v=mlmyFXJy8gQ
+    -->
+    <Style x:Key="pageLinkTxtBlock" TargetType="TextBlock">
+        <Setter Property="Text" Value="HERE"/>
+        <Setter Property="Margin" Value="5 1"/>
+        <Setter Property="Foreground" Value="#45b3e7"/>
+        <Setter Property="FontSize" Value="18"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Foreground" Value="#7cc9ee"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!--
+        The code for the styling below was modified and implemented from a YouTube video
+        Titled: C# WPF UI | How to Design Flat Data Table Dashboard in WPF (Customize Datagrid)
+        Link: https://www.youtube.com/watch?v=mlmyFXJy8gQ
+    -->
+    <Style x:Key="lstBoxForm" TargetType="ListBox">
+        <Setter Property="Background" Value="#eff2f7"/>
+        <Setter Property="MaxHeight" Value="200"/>
+        <Setter Property="Margin" Value="0 20"/>
+
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="BorderBrush" Value="#45b3e7"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+    
+
+</ResourceDictionary>

@@ -1,0 +1,134 @@
+﻿<Page x:Class="ST10091324_PROG7312_Part1.Views.ServiceRequestPage1"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+      xmlns:local="clr-namespace:ST10091324_PROG7312_Part1.Views"  
+      xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+      xmlns:converters="clr-namespace:ST10091324_PROG7312_Part1.Converter" 
+      mc:Ignorable="d" 
+      d:DesignHeight="450" d:DesignWidth="800"
+      Title="ServiceRequest"
+      Background="#eff2f7"
+      FontSize="18">
+
+    <!-- Add Material Design Resource Dictionary -->
+    <Page.Resources>
+        <ResourceDictionary>
+            <!-- Define Converters -->
+            <converters:StatusToColorConverter x:Key="StatusToColorConverter"/>
+            <converters:ProgressBarColorConverter x:Key="ProgressBarColorConverter"/>
+        </ResourceDictionary>
+    </Page.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Name="MessageStackPanelServiceRequest" Orientation="Horizontal"
+                Grid.ColumnSpan="2" Grid.Row="0" Margin="0,0,0,5">
+
+            <materialDesign:PackIcon x:Name="MessagetHeaderIconServiceRequest" 
+                                 Kind="EmoticonConfused"
+                                 Width="40" Height="40" 
+                                 VerticalAlignment="Center" HorizontalAlignment="Right"
+                                 Foreground="DarkOrange" 
+                                 Margin="0,0,15,0"/>
+
+            <TextBlock x:Name="MessageHeaderServiceRequest"
+                   FontSize="18" Width="700" Foreground="DarkOrange" TextWrapping="WrapWithOverflow">
+            We didn't find any service requests for your account. Click on the create service request button below to open a service request.
+            </TextBlock>
+        </StackPanel>
+
+
+        <Grid x:Name="bottomHeaderGrid" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Stretch">
+            <!-- Define two columns: one for the search grid, and one for the button -->
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <!-- For the search grid -->
+                <ColumnDefinition Width="*"/>
+                <!-- Flexible space between search grid and button -->
+                <ColumnDefinition Width="Auto"/>
+                <!-- For the button -->
+            </Grid.ColumnDefinitions>
+
+            <!-- Search Grid -->
+            <Grid x:Name="searchGrid" Width="300" HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="1">
+                <TextBox x:Name="requestSearch" Style="{StaticResource requestBoxSearch}"
+             BorderThickness="0" Padding="15 10" TextChanged="requestSearch_TextChanged"/>
+                <materialDesign:PackIcon Kind="Magnify" Width="20" Height="20" VerticalAlignment="Center" HorizontalAlignment="Right"
+                             Margin="0,0,15,0" Foreground="#b0b9c6"/>
+            </Grid>
+
+            <!-- Button aligned to the far right -->
+            <Button x:Name="CreateServiceRequestBtn" Content="Create Service Request" 
+                FontSize="15" 
+                HorizontalAlignment="Right" 
+                MinWidth="200" Height="30" 
+                Grid.Column="0" Click="CreateServiceRequestBtn_Click"
+                Margin="0,0,20,0"/>
+        </Grid>
+
+
+        <ListBox Name="ServiceRequestsList" Background="Transparent" Grid.Row="2"
+        ScrollViewer.CanContentScroll="True" 
+        VirtualizingStackPanel.IsVirtualizing="True" 
+        VirtualizingStackPanel.VirtualizationMode="Recycling" SelectionChanged="ServiceRequestsList_SelectionChanged">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <materialDesign:Card Padding="20" Margin="0,0,0,15" Width="{Binding RelativeSource={RelativeSource AncestorType=ListBox}, Path=ActualWidth}">
+                        <StackPanel>
+                            <TextBlock Text="{Binding RequestID}" FontSize="16" FontWeight="Bold" Foreground="#212121"/>
+                            <TextBlock Text="{Binding Description}" Margin="0,5,0,15" Foreground="#757575"/>
+
+                            <!-- Status Label -->
+                            <TextBlock Text="Status: " Foreground="#616161" FontWeight="Bold"/>
+
+                            <!-- Conditionally show status text or ComboBox for editing -->
+                            <StackPanel>
+                                <!-- The normal TextBlock for displaying status -->
+                                <TextBlock Text="{Binding Status}" 
+                              Foreground="{Binding Status, Converter={StaticResource StatusToColorConverter}}" 
+                              FontWeight="Bold"/>
+
+
+                            </StackPanel>
+
+                            <!-- Progress bar remains unchanged -->
+                            <ProgressBar x:Name="StatusProgressBar" Value="{Binding Progress}" Minimum="0" Maximum="100" Height="20" 
+                                         Width="{Binding RelativeSource={RelativeSource AncestorType=materialDesign:Card}, Path=ActualWidth}" 
+                                         Margin="0,15,30,0" IsIndeterminate="{Binding IsIndeterminate}"
+                                         Foreground="{Binding Status, Converter={StaticResource ProgressBarColorConverter}}"/>
+
+                            <!-- TextBlock to indicate if it's a search result or related -->
+                            <TextBlock Margin="0,10,0,0" FontWeight="Bold" FontSize="12">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <!-- Show "Search Result" label if it's a search result -->
+                                            <DataTrigger Binding="{Binding SearchRequestType}" Value="S">
+                                                <Setter Property="Text" Value="Search Result" />
+                                                <Setter Property="Foreground" Value="Green" />
+                                            </DataTrigger>
+                                            <!-- Show "Related Request" label if it's a related request -->
+                                            <DataTrigger Binding="{Binding SearchRequestType}" Value="R">
+                                                <Setter Property="Text" Value="Related Request" />
+                                                <Setter Property="Foreground" Value="Gray" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+
+                        </StackPanel>
+                    </materialDesign:Card>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+    </Grid>
+</Page>

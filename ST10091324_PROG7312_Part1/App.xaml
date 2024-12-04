@@ -1,0 +1,32 @@
+﻿<Application x:Class="ST10091324_PROG7312_Part1.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"            
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:Icon="http://metro.mahapps.com/winfx/xaml/iconpacks"
+             StartupUri="Views/Login.xaml">
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!--
+                    The code to add the materialDesign resource dictionaries was taken from GitHub
+                    Author: Kevin Bost
+                    Link: https://github.com/MaterialDesignInXAML/MaterialDesignInXamlToolkit/wiki/Getting-Started
+                -->
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign3.Defaults.xaml" />
+                <materialDesign:CustomColorTheme BaseTheme="Light" PrimaryColor="#45b3e7" SecondaryColor="#7cc9ee" />
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign3.Defaults.xaml" />
+
+                <!--
+                    The code to add a resource dictionary was taken from StackOverflow
+                    Author: Umair Farooq
+                    Link: https://stackoverflow.com/questions/38916521/how-to-use-resource-dictionary-in-wpf
+                -->
+                <ResourceDictionary Source="Styles/BurgerMenuStyle.xaml"/>
+                <ResourceDictionary Source="Styles/TextBoxStyle.xaml"/>
+                <ResourceDictionary Source="Styles/SubmitButtonStyle.xaml"/>
+
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
