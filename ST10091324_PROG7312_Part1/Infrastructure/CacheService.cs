@@ -2,6 +2,8 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Caching;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using ST10091324_PROG7312_Part1.Model;
@@ -9,26 +11,42 @@ using ST10091324_PROG7312_Part1.Model;
 namespace ST10091324_PROG7312_Part1.Infrastructure
 {
     /// <summary>
-    /// In-memory caching service for frequently accessed data with TTL and LRU eviction
+    /// Provides advanced caching functionality with invalidation strategies for improved performance
     /// </summary>
     public class CacheService : IDisposable
     {
-        private readonly ConcurrentDictionary<string, CacheItem> _cache;
+        private readonly MemoryCache _cache;
+        private readonly ConcurrentDictionary<string, DateTime> _cacheMetrics;
+        private readonly ConcurrentDictionary<string, List<string>> _taggedKeys;
+        private readonly ConcurrentDictionary<string, CacheItemPolicy> _policies;
         private readonly Timer _cleanupTimer;
         private readonly object _lockObject = new object();
-        private readonly int _maxCacheSize;
-        private readonly TimeSpan _defaultTtl;
-        private bool _disposed = false;
-
-        public CacheService(int maxCacheSize = 1000, TimeSpan? defaultTtl = null)
+        private bool _isDisposed = false;
+        
+        // Cache statistics (using fields for thread-safe operations)
+        private int _cacheHits;
+        private int _cacheMisses;
+        private int _cacheEvictions;
+        
+        public int CacheHits => _cacheHits;
+        public int CacheMisses => _cacheMisses;
+        public int CacheEvictions => _cacheEvictions;
+        public double HitRatio => CacheHits + CacheMisses > 0 ? (double)CacheHits / (CacheHits + CacheMisses) : 0;
+        public long TotalMemoryUsage => GC.GetTotalMemory(false);
+        
+        // Cache configuration
+        public TimeSpan DefaultExpiration { get; set; } = TimeSpan.FromMinutes(30);
+        public long MaxMemoryUsage { get; set; } = 100 * 1024 * 1024; // 100MB
+        
+        public CacheService()
         {
-            _cache = new ConcurrentDictionary<string, CacheItem>();
-            _maxCacheSize = maxCacheSize;
-            _defaultTtl = defaultTtl ?? TimeSpan.FromMinutes(30);
+            _cache = MemoryCache.Default;
+            _cacheMetrics = new ConcurrentDictionary<string, DateTime>();
+            _taggedKeys = new ConcurrentDictionary<string, List<string>>();
+            _policies = new ConcurrentDictionary<string, CacheItemPolicy>();
             
-            // Cleanup expired items every 5 minutes
-            _cleanupTimer = new Timer(CleanupExpiredItems, null, 
-                TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+            // Setup cleanup timer to run every 5 minutes
+            _cleanupTimer = new Timer(PerformCleanup, null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
         }
 
         /// <summary>
@@ -63,70 +81,191 @@ namespace ST10091324_PROG7312_Part1.Infrastructure
         }
 
         /// <summary>
-        /// Gets cached value synchronously
+        /// Gets a cached item asynchronously
         /// </summary>
-        /// <typeparam name="T">Type of cached value</typeparam>
-        /// <param name="key">Cache key</param>
-        /// <returns>Cached value or default</returns>
-        public T Get<T>(string key)
+        public async Task<T> GetAsync<T>(string key) where T : class
         {
             if (string.IsNullOrEmpty(key))
-                return default(T);
-
-            if (_cache.TryGetValue(key, out var cacheItem) && !cacheItem.IsExpired)
             {
-                cacheItem.UpdateLastAccessed();
-                return (T)cacheItem.Value;
+                Interlocked.Increment(ref _cacheMisses);
+                return null;
             }
 
-            return default(T);
+            var item = _cache.Get(key) as T;
+            if (item != null)
+            {
+                Interlocked.Increment(ref _cacheHits);
+                _cacheMetrics.TryAdd(key, DateTime.UtcNow);
+                return item;
+            }
+            
+            Interlocked.Increment(ref _cacheMisses);
+            return null;
+        }
+        
+        /// <summary>
+        /// Gets a cached item synchronously
+        /// </summary>
+        public T Get<T>(string key) where T : class
+        {
+            if (string.IsNullOrEmpty(key))
+            {
+                Interlocked.Increment(ref _cacheMisses);
+                return null;
+            }
+
+            var item = _cache.Get(key) as T;
+            if (item != null)
+            {
+                Interlocked.Increment(ref _cacheHits);
+                _cacheMetrics.TryAdd(key, DateTime.UtcNow);
+                return item;
+            }
+            
+            Interlocked.Increment(ref _cacheMisses);
+            return null;
         }
 
         /// <summary>
-        /// Sets a value in cache
+        /// Sets a cached item asynchronously with optional tags and custom expiration
         /// </summary>
-        /// <param name="key">Cache key</param>
-        /// <param name="value">Value to cache</param>
-        /// <param name="expiresAt">Expiration time</param>
-        public void Set(string key, object value, DateTime? expiresAt = null)
+        public async Task SetAsync<T>(string key, T value, TimeSpan? expiration = null, params string[] tags) where T : class
         {
-            if (string.IsNullOrEmpty(key))
-                throw new ArgumentException("Cache key cannot be null or empty", nameof(key));
+            if (string.IsNullOrEmpty(key) || value == null)
+                return;
 
-            var expiration = expiresAt ?? DateTime.UtcNow.Add(_defaultTtl);
-            var newItem = new CacheItem(value, expiration);
-
-            lock (_lockObject)
+            var policy = new CacheItemPolicy
             {
-                // Check cache size and evict if necessary
-                if (_cache.Count >= _maxCacheSize && !_cache.ContainsKey(key))
+                AbsoluteExpiration = DateTimeOffset.UtcNow.Add(expiration ?? DefaultExpiration),
+                Priority = CacheItemPriority.Default,
+                RemovedCallback = OnCacheItemRemoved
+            };
+
+            _cache.Set(key, value, policy);
+            _policies.TryAdd(key, policy);
+            _cacheMetrics.TryAdd(key, DateTime.UtcNow);
+            
+            // Handle tags for cache invalidation
+            if (tags != null && tags.Length > 0)
+            {
+                foreach (var tag in tags)
                 {
-                    EvictLeastRecentlyUsed();
+                    _taggedKeys.AddOrUpdate(tag, new List<string> { key }, (k, v) => 
+                    {
+                        if (!v.Contains(key))
+                            v.Add(key);
+                        return v;
+                    });
                 }
+            }
+        }
+        
+        /// <summary>
+        /// Sets a cached item synchronously with optional tags and custom expiration
+        /// </summary>
+        public void Set<T>(string key, T value, TimeSpan? expiration = null, params string[] tags) where T : class
+        {
+            if (string.IsNullOrEmpty(key) || value == null)
+                return;
 
-                _cache.AddOrUpdate(key, newItem, (k, existing) => newItem);
+            var policy = new CacheItemPolicy
+            {
+                AbsoluteExpiration = DateTimeOffset.UtcNow.Add(expiration ?? DefaultExpiration),
+                Priority = CacheItemPriority.Default,
+                RemovedCallback = OnCacheItemRemoved
+            };
+
+            _cache.Set(key, value, policy);
+            _policies.TryAdd(key, policy);
+            _cacheMetrics.TryAdd(key, DateTime.UtcNow);
+            
+            // Handle tags for cache invalidation
+            if (tags != null && tags.Length > 0)
+            {
+                foreach (var tag in tags)
+                {
+                    _taggedKeys.AddOrUpdate(tag, new List<string> { key }, (k, v) => 
+                    {
+                        if (!v.Contains(key))
+                            v.Add(key);
+                        return v;
+                    });
+                }
             }
         }
 
         /// <summary>
-        /// Removes item from cache
+        /// Removes a specific item from cache
         /// </summary>
-        /// <param name="key">Cache key</param>
-        /// <returns>True if item was removed</returns>
-        public bool Remove(string key)
+        public void Remove(string key)
         {
             if (string.IsNullOrEmpty(key))
-                return false;
+                return;
 
-            return _cache.TryRemove(key, out _);
+            _cache.Remove(key);
+            _cacheMetrics.TryRemove(key, out _);
+            _policies.TryRemove(key, out _);
+            
+            // Remove from tagged keys
+            foreach (var taggedKey in _taggedKeys)
+            {
+                taggedKey.Value.Remove(key);
+            }
         }
-
+        
         /// <summary>
-        /// Clears all cached items
+        /// Invalidates cache entries by tag
+        /// </summary>
+        public void InvalidateByTag(string tag)
+        {
+            if (string.IsNullOrEmpty(tag))
+                return;
+                
+            if (_taggedKeys.TryGetValue(tag, out var keys))
+            {
+                foreach (var key in keys.ToList())
+                {
+                    Remove(key);
+                }
+                _taggedKeys.TryRemove(tag, out _);
+            }
+        }
+        
+        /// <summary>
+        /// Invalidates cache entries matching a pattern
+        /// </summary>
+        public void InvalidateByPattern(string pattern)
+        {
+            if (string.IsNullOrEmpty(pattern))
+                return;
+                
+            var regex = new Regex(pattern, RegexOptions.IgnoreCase);
+            var keysToRemove = _cacheMetrics.Keys.Where(key => regex.IsMatch(key)).ToList();
+            
+            foreach (var key in keysToRemove)
+            {
+                Remove(key);
+            }
+        }
+        
+        /// <summary>
+        /// Clears all cache entries
         /// </summary>
         public void Clear()
         {
-            _cache.Clear();
+            foreach (var key in _cacheMetrics.Keys.ToList())
+            {
+                _cache.Remove(key);
+            }
+            
+            _cacheMetrics.Clear();
+            _policies.Clear();
+            _taggedKeys.Clear();
+            
+            // Reset statistics
+            _cacheHits = 0;
+            _cacheMisses = 0;
+            _cacheEvictions = 0;
         }
 
         /// <summary>
@@ -169,29 +308,95 @@ namespace ST10091324_PROG7312_Part1.Infrastructure
         }
 
         /// <summary>
-        /// Cleanup timer callback to remove expired items
+        /// Performs periodic cleanup of expired items and memory management
         /// </summary>
-        /// <param name="state">Timer state</param>
-        private void CleanupExpiredItems(object state)
+        private void PerformCleanup(object state)
         {
-            var expiredKeys = _cache
-                .Where(kvp => kvp.Value.IsExpired)
-                .Select(kvp => kvp.Key)
-                .ToList();
-
-            foreach (var key in expiredKeys)
+            try
             {
-                _cache.TryRemove(key, out _);
+                // Check memory usage and trigger cleanup if needed
+                if (TotalMemoryUsage > MaxMemoryUsage)
+                {
+                    var itemsToRemove = _cacheMetrics
+                        .OrderBy(kvp => kvp.Value)
+                        .Take(_cacheMetrics.Count / 4) // Remove 25% of oldest items
+                        .Select(kvp => kvp.Key)
+                        .ToList();
+                        
+                    foreach (var key in itemsToRemove)
+                    {
+                        Remove(key);
+                        Interlocked.Increment(ref _cacheEvictions);
+                    }
+                }
+                
+                // Clean up empty tag collections
+                var emptyTags = _taggedKeys
+                    .Where(kvp => kvp.Value.Count == 0)
+                    .Select(kvp => kvp.Key)
+                    .ToList();
+                    
+                foreach (var tag in emptyTags)
+                {
+                    _taggedKeys.TryRemove(tag, out _);
+                }
+                
+                // Force garbage collection if memory usage is still high
+                if (TotalMemoryUsage > MaxMemoryUsage * 0.8)
+                {
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log cleanup errors but don't throw
+                System.Diagnostics.Debug.WriteLine($"Cache cleanup error: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Callback when cache item is removed
+        /// </summary>
+        private void OnCacheItemRemoved(CacheEntryRemovedArguments arguments)
+        {
+            _cacheMetrics.TryRemove(arguments.CacheItem.Key, out _);
+            _policies.TryRemove(arguments.CacheItem.Key, out _);
+            
+            if (arguments.RemovedReason == CacheEntryRemovedReason.Evicted)
+            {
+                Interlocked.Increment(ref _cacheEvictions);
             }
         }
 
+        /// <summary>
+        /// Gets or sets cache item with automatic expiration
+        /// </summary>
+        public T GetOrSet<T>(string key, Func<T> factory, TimeSpan? expiration = null, params string[] tags) where T : class
+        {
+            var item = Get<T>(key);
+            if (item != null)
+                return item;
+                
+            var value = factory();
+            if (value != null)
+            {
+                Set(key, value, expiration, tags);
+            }
+            
+            return value;
+        }
+        
+        /// <summary>
+        /// Disposes the cache service and releases resources
+        /// </summary>
         public void Dispose()
         {
-            if (!_disposed)
+            if (!_isDisposed)
             {
                 _cleanupTimer?.Dispose();
-                _cache.Clear();
-                _disposed = true;
+                Clear();
+                _isDisposed = true;
             }
         }
     }
@@ -219,17 +424,7 @@ namespace ST10091324_PROG7312_Part1.Infrastructure
         }
     }
 
-    /// <summary>
-    /// Cache statistics for monitoring
-    /// </summary>
-    public class CacheStatistics
-    {
-        public int TotalItems { get; set; }
-        public int ActiveItems { get; set; }
-        public int ExpiredItems { get; set; }
-        public int MaxCacheSize { get; set; }
-        public double CacheUtilization { get; set; }
-    }
+
 
     /// <summary>
     /// Specialized cache service for database entities with predefined cache keys
