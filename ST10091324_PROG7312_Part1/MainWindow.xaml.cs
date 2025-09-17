@@ -1,6 +1,7 @@
 using ST10091324_PROG7312_Part1.Model;
 using ST10091324_PROG7312_Part1.Views;
 using System;
+using System.Data.Entity;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;

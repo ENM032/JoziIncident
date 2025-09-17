@@ -28,8 +28,8 @@ namespace ST10091324_PROG7312_Part1.Views
 
         private ServiceRequestBST _serviceRequestBST;
         private ServiceRequestGraph _serviceRequestGraph;
-        private readonly User CurrentUser;
-        private readonly string CurrentUserRole;
+        private User CurrentUser;
+        private string CurrentUserRole;
 
         private readonly ObservableCollection<String> StatusOptions = new ObservableCollection<string>
         {
