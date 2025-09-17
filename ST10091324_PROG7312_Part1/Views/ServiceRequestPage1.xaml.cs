@@ -1,8 +1,13 @@
 ﻿using MaterialDesignThemes.Wpf;
 using ST10091324_PROG7312_Part1.Model;
+using ST10091324_PROG7312_Part1.DataStructures;
+using ST10091324_PROG7312_Part1.Services;
+using ST10091324_PROG7312_Part1.Infrastructure;
+using ST10091324_PROG7312_Part1.Views;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Data.Entity;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -15,6 +20,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ST10091324_PROG7312_Part1.Views
 {
@@ -27,8 +33,12 @@ namespace ST10091324_PROG7312_Part1.Views
 
         private ServiceRequestBST _serviceRequestBST;
         private ServiceRequestGraph _serviceRequestGraph;
-        private readonly User CurrentUser;
-        private readonly string CurrentUserRole;
+        private User CurrentUser;
+        private string CurrentUserRole;
+        private readonly RealTimeDataSyncService _realTimeDataSyncService;
+        private readonly CacheService _cacheService;
+        private readonly DataValidationService _dataValidationService;
+        private readonly DatabaseHealthMonitor _databaseHealthMonitor;
 
         private readonly ObservableCollection<String> StatusOptions = new ObservableCollection<string>
         {
@@ -43,41 +53,118 @@ namespace ST10091324_PROG7312_Part1.Views
         public ServiceRequestPage1(Guid userId)
         {
             InitializeComponent();
-
-            CurrentUser = GetUserFromDatabase(userId);
-            CurrentUserRole = CurrentUser.Role;
-
-            _serviceRequestBST = new ServiceRequestBST();
-            _serviceRequestGraph = new ServiceRequestGraph();
-
-            // Initialize data
-            InitializeServiceRequests();
-
-            // Get the sorted list of service requests from the BST
-            List<ServiceRequest> sortedRequests = _serviceRequestBST.InOrderTraversal(CurrentUser.Id);
-
-            // Convert to ObservableCollection for data binding
-            ServiceRequests = new ObservableCollection<ServiceRequest>(sortedRequests);
-
-            // Bind the ListBox to the ObservableCollection
-            ServiceRequestsList.ItemsSource = ServiceRequests;
-
-            ChangeMessageHeaderTitle();
+            
+            // Get Phase 3 services from DI container
+            var app = (App)Application.Current;
+            _realTimeDataSyncService = app.ServiceProvider.GetRequiredService<RealTimeDataSyncService>();
+            _cacheService = app.ServiceProvider.GetRequiredService<CacheService>();
+            _dataValidationService = app.ServiceProvider.GetRequiredService<DataValidationService>();
+            _databaseHealthMonitor = app.ServiceProvider.GetRequiredService<DatabaseHealthMonitor>();
+            
+            // Initialize async loading
+            _ = InitializePageAsync(userId);
+        }
+        
+        private async Task InitializePageAsync(Guid userId)
+        {
+            try
+            {
+                // Check cache first
+                string cacheKey = $"user_{userId}";
+                CurrentUser = await _cacheService.GetAsync<User>(cacheKey);
+                
+                if (CurrentUser == null)
+                {
+                    CurrentUser = await GetUserFromDatabaseAsync(userId).ConfigureAwait(false);
+                    if (CurrentUser != null)
+                    {
+                        // Cache user data for 30 minutes
+                        await _cacheService.SetAsync(cacheKey, CurrentUser, TimeSpan.FromMinutes(30));
+                    }
+                }
+                
+                // Switch back to UI thread for UI updates
+                await Dispatcher.InvokeAsync(async () =>
+                {
+                    CurrentUserRole = CurrentUser?.Role ?? "Guest";
+                    
+                    _serviceRequestBST = new ServiceRequestBST();
+                    _serviceRequestGraph = new ServiceRequestGraph();
+                    
+                    // Initialize data
+                    await InitializeServiceRequestsAsync();
+                    
+                    // Get the sorted list of service requests from the BST
+                    List<ServiceRequest> sortedRequests = _serviceRequestBST.InOrderTraversal(CurrentUser.Id);
+                    
+                    // Convert to ObservableCollection for data binding
+                    ServiceRequests = new ObservableCollection<ServiceRequest>(sortedRequests);
+                    
+                    // Bind the ListBox to the ObservableCollection
+                    ServiceRequestsList.ItemsSource = ServiceRequests;
+                    
+                    ChangeMessageHeaderTitle();
+                    
+                    // Start real-time synchronization
+                    await _realTimeDataSyncService.StartSyncAsync();
+                });
+            }
+            catch (Exception ex)
+            {
+                // Handle errors gracefully
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    ShowToast("ERROR", "Failed to load user data. Please try again.");
+                });
+            }
         }
 
-        private User GetUserFromDatabase(Guid userIdentifier)
+        private async Task<User> GetUserFromDatabaseAsync(Guid userIdentifier)
         {
             using (var context = new UserDbContext())
             {
-                // Query to find the user by user id
-                return context.Users
-                              .FirstOrDefault(u => u.Id == userIdentifier);
+                try
+                {
+                    // Query to find the user by user id using async method
+                    return await context.Users
+                                  .FirstOrDefaultAsync(u => u.Id == userIdentifier)
+                                  .ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    // Log error and return null for graceful handling
+                    System.Diagnostics.Debug.WriteLine($"Database error in GetUserFromDatabaseAsync: {ex.Message}");
+                    return null;
+                }
             }
         }
 
         // Initialize some sample data
-        private void InitializeServiceRequests()
+        private async Task InitializeServiceRequestsAsync()
         {
+            // Check cache for service requests
+            string cacheKey = $"service_requests_{CurrentUser.Id}";
+            var cachedRequests = await _cacheService.GetAsync<List<ServiceRequest>>(cacheKey);
+            
+            if (cachedRequests != null && cachedRequests.Any())
+            {
+                // Load from cache
+                foreach (var request in cachedRequests)
+                {
+                    _serviceRequestBST.Insert(request);
+                }
+            }
+            else
+            {
+                // Initialize with sample data and cache it
+                await InitializeSampleServiceRequestsAsync();
+            }
+        }
+        
+        private async Task InitializeSampleServiceRequestsAsync()
+        {
+            var serviceRequests = new List<ServiceRequest>();
+            
             // Street Maintenance - Pothole Repair
             ServiceRequest streetRepair1 = new ServiceRequest(
                 "Pothole repair on Main Street near Elm Avenue.",
@@ -169,24 +256,36 @@ namespace ST10091324_PROG7312_Part1.Views
             );
 
 
-            // Insert into BST
-            _serviceRequestBST.Insert(streetRepair1);
-            _serviceRequestBST.Insert(streetRepair2);
-            _serviceRequestBST.Insert(streetlightOutage);
-            _serviceRequestBST.Insert(missedGarbage);
-            _serviceRequestBST.Insert(treeTrimming);
-            _serviceRequestBST.Insert(parkMaintenance);
-            _serviceRequestBST.Insert(pestControl);
-            _serviceRequestBST.Insert(emergencyHousing);
-            _serviceRequestBST.Insert(trafficSignalRepair);
-            _serviceRequestBST.Insert(pollutionComplaint);
+            // Add all service requests to the list
+            serviceRequests.AddRange(new[] {
+                streetRepair1, streetRepair2, streetlightOutage, missedGarbage,
+                treeTrimming, parkMaintenance, pestControl, emergencyHousing,
+                trafficSignalRepair, pollutionComplaint
+            });
+            
+            // Validate service requests before inserting
+            foreach (var request in serviceRequests)
+            {
+                var validationResult = await _dataValidationService.ValidateServiceRequestAsync(request);
+                if (validationResult.IsValid)
+                {
+                    _serviceRequestBST.Insert(request);
+                }
+                else
+                {
+                    ShowToast("WARNING", $"Invalid service request: {string.Join(", ", validationResult.Errors)}");
+                }
+            }
+            
+            // Cache the service requests for 15 minutes
+            string cacheKey = $"service_requests_{CurrentUser.Id}";
+            await _cacheService.SetAsync(cacheKey, serviceRequests, TimeSpan.FromMinutes(15));
 
             // Add dependencies to graph
             _serviceRequestGraph.AddDependency(streetRepair1, streetlightOutage);
             _serviceRequestGraph.AddDependency(streetRepair1, trafficSignalRepair);
             _serviceRequestGraph.AddDependency(streetRepair1, missedGarbage);
             _serviceRequestGraph.AddDependency(parkMaintenance, treeTrimming);
-
             _serviceRequestGraph.AddDependency(pestControl, emergencyHousing);
         }
 
@@ -273,19 +372,39 @@ namespace ST10091324_PROG7312_Part1.Views
             }
         }
 
-        private void ChangeServiceRequestStatus(string requestId, string newStatus)
+        private async Task ChangeServiceRequestStatusAsync(string requestId, string newStatus)
         {
-            bool success = _serviceRequestBST.UpdateStatus(requestId, newStatus);
+            try
+            {
+                // Validate the new status
+                var statusValidation = await _dataValidationService.ValidateServiceRequestStatusAsync(requestId, newStatus);
+                if (!statusValidation.IsValid)
+                {
+                    ShowToast("ERROR", $"Invalid status change: {string.Join(", ", statusValidation.Errors)}");
+                    return;
+                }
+                
+                bool success = _serviceRequestBST.UpdateStatus(requestId, newStatus);
 
-            if (success)
-            {
-                ShowToast("INFO", "Service request successfully changed.");
-                //MessageBox.Show($"Status of service request {requestId} updated to {newStatus}.", "Success");
+                if (success)
+                {
+                    // Invalidate cache for this user's service requests
+                    string cacheKey = $"service_requests_{CurrentUser.Id}";
+                    await _cacheService.RemoveAsync(cacheKey);
+                    
+                    // Trigger real-time sync for the update
+                    await _realTimeDataSyncService.SyncServiceRequestUpdateAsync(requestId, newStatus);
+                    
+                    ShowToast("INFO", "Service request successfully changed.");
+                }
+                else
+                {
+                    ShowToast("ERROR", "Something went wrong! Could not change service request.");
+                }
             }
-            else
+            catch (Exception ex)
             {
-                ShowToast("INFO", "Something went wrong! Could not change service request.");
-                //MessageBox.Show($"Service request {requestId} not found.", "Error");
+                ShowToast("ERROR", $"Failed to update service request: {ex.Message}");
             }
         }
 
@@ -322,8 +441,16 @@ namespace ST10091324_PROG7312_Part1.Views
             }
         }
 
-        private void CreateServiceRequestBtn_Click(object sender, System.Windows.RoutedEventArgs e)
+        private async void CreateServiceRequestBtn_Click(object sender, System.Windows.RoutedEventArgs e)
         {
+            // Check database health before allowing new service request creation
+            var healthStatus = await _databaseHealthMonitor.CheckHealthAsync();
+            if (!healthStatus.IsHealthy)
+            {
+                ShowToast("WARNING", "Database is experiencing issues. Please try again later.");
+                return;
+            }
+            
             // Navigate to the home page after submission
             // Retrieve Current Application Instance
             // This line gets the current application instance and casts it to the App class.
@@ -343,6 +470,44 @@ namespace ST10091324_PROG7312_Part1.Views
         private Guid ConvertStringToGuid(string id)
         {
             return Guid.Parse(id);
+        }
+        
+        // Phase 3: Database health monitoring
+        private async Task<bool> CheckDatabaseHealthAsync()
+        {
+            try
+            {
+                var healthStatus = await _databaseHealthMonitor.CheckHealthAsync();
+                if (!healthStatus.IsHealthy)
+                {
+                    ShowToast("WARNING", $"Database health issue: {healthStatus.Message}");
+                    return false;
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ShowToast("ERROR", $"Health check failed: {ex.Message}");
+                return false;
+            }
+        }
+        
+        // Phase 3: Cleanup resources when page is disposed
+        protected override void OnClosed(EventArgs e)
+        {
+            try
+            {
+                _realTimeDataSyncService?.StopSyncAsync();
+                _cacheService?.Dispose();
+                _databaseHealthMonitor?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't throw during cleanup
+                System.Diagnostics.Debug.WriteLine($"Error during cleanup: {ex.Message}");
+            }
+            
+            base.OnClosed(e);
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using ST10091324_PROG7312_Part1.Model;
+using ST10091324_PROG7312_Part1.Model;
 using System;
 using System.Data.Entity;
 using System.Linq;
@@ -104,7 +104,7 @@ namespace ST10091324_PROG7312_Part1.Views
             try
             {
                 // Attempt to log the user in
-                var retrievedUser = await RetrieveUserByIdentifier(userIdentifier);
+                var retrievedUser = await RetrieveUserByIdentifier(userIdentifier).ConfigureAwait(false);
                 if (retrievedUser == null)
                 {
                     MessageTxtBlock.Text = "User not found!";
@@ -112,7 +112,7 @@ namespace ST10091324_PROG7312_Part1.Views
                 }
 
                 // Verify password
-                bool isPasswordValid = await VerifyUserPassword(retrievedUser, PasswordBox.Password);
+                bool isPasswordValid = await VerifyUserPassword(retrievedUser, PasswordBox.Password).ConfigureAwait(false);
                 if (isPasswordValid)
                 {
                     HandleSuccessfulLogin(retrievedUser);
@@ -146,15 +146,24 @@ namespace ST10091324_PROG7312_Part1.Views
 
         private async Task<bool> VerifyUserPassword(User user, string password)
         {
-            return await Task.Run(() => PasswordHasher.VerifyPasswordHash(user.Username, password, user.Password));
+            return await Task.Run(() => PasswordHasher.VerifyPasswordHash(user.Username, password, user.Password)).ConfigureAwait(false);
         }
 
         private async Task<User> RetrieveUserByIdentifier(string userIdentifier)
         {
             using (var context = new UserDbContext())
             {
-                return await context.Users
-                                    .FirstOrDefaultAsync(u => u.Username == userIdentifier || u.Email == userIdentifier);
+                try
+                {
+                    return await context.Users
+                                        .FirstOrDefaultAsync(u => u.Username == userIdentifier || u.Email == userIdentifier).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    // Log error and return null for graceful handling
+                    System.Diagnostics.Debug.WriteLine($"Database error in RetrieveUserByIdentifier: {ex.Message}");
+                    return null;
+                }
             }
         }
 
@@ -163,7 +172,7 @@ namespace ST10091324_PROG7312_Part1.Views
             ShowToast("SUCCESS", "Login successful!");
 
             // Add a delay of 1 second (1000 milliseconds)
-            await Task.Delay(2000);
+            await Task.Delay(2000).ConfigureAwait(false);
 
             var currentApp = (App)Application.Current;
             currentApp.MainWindow = new MainWindow(user.Id);
@@ -210,7 +219,7 @@ namespace ST10091324_PROG7312_Part1.Views
                     // Simple query to test the connection, like fetching the first user or just checking count
                     var testQuery = await context.Users
                                                   .Take(1)  // Just fetching one record to avoid heavy load
-                                                  .ToListAsync();
+                                                  .ToListAsync().ConfigureAwait(false);
                 }
             }
             catch (Exception ex)
@@ -222,7 +231,7 @@ namespace ST10091324_PROG7312_Part1.Views
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            await WarmUpDatabaseAsync();
+            await WarmUpDatabaseAsync().ConfigureAwait(false);
         }
     }
 }

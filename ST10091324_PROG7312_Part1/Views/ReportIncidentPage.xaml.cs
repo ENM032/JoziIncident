@@ -1,4 +1,4 @@
-﻿using MaterialDesignThemes.Wpf;
+using MaterialDesignThemes.Wpf;
 using ST10091324_PROG7312_Part1.Model;
 using System;
 using System.Collections.Generic;
@@ -90,7 +90,7 @@ namespace ST10091324_PROG7312_Part1.Views
                     else
                     {
                         // Fetch the user ID from the database based on the userIdentifier (e.g., username or email)
-                        var user = await GetUserFromDatabaseAsync(UserID); // Assuming UserIdentifier is available
+                        var user = await GetUserFromDatabaseAsync(UserID).ConfigureAwait(false); // Assuming UserIdentifier is available
                         if (user == null)
                         {
                             ShowWarningMessage("User not found!");
@@ -102,7 +102,7 @@ namespace ST10091324_PROG7312_Part1.Views
                         incident.UserId = user.Id;
 
                         // Add the incident to the database asynchronously
-                        await AddIncidentToDatabaseAsync(incident);
+                        await AddIncidentToDatabaseAsync(incident).ConfigureAwait(false);
 
                         // Clear the form inputs after submission
                         ClearFormFields();
@@ -134,8 +134,17 @@ namespace ST10091324_PROG7312_Part1.Views
             // Fetch the user from the database asynchronously based on the userIdentifier (e.g., username or email)
             using (var context = new UserDbContext())
             {
-                return await context.Users
-                                    .FirstOrDefaultAsync(u => u.Id == userId);
+                try
+                {
+                    return await context.Users
+                                        .FirstOrDefaultAsync(u => u.Id == userId).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    // Log error and return null for graceful handling
+                    System.Diagnostics.Debug.WriteLine($"Database error in GetUserFromDatabaseAsync: {ex.Message}");
+                    return null;
+                }
             }
         }
 
@@ -144,8 +153,17 @@ namespace ST10091324_PROG7312_Part1.Views
             // Use async database operations to add the incident
             using (var context = new UserDbContext())
             {
-                context.Incidents.Add(incident);  // Add the incident to the context
-                await context.SaveChangesAsync(); // Save changes asynchronously to the database
+                try
+                {
+                    context.Incidents.Add(incident);  // Add the incident to the context
+                    await context.SaveChangesAsync().ConfigureAwait(false); // Save changes asynchronously to the database
+                }
+                catch (Exception ex)
+                {
+                    // Log error and rethrow for upper level handling
+                    System.Diagnostics.Debug.WriteLine($"Database error in AddIncidentToDatabaseAsync: {ex.Message}");
+                    throw new InvalidOperationException("Failed to save incident to database. Please try again.", ex);
+                }
             }
         }
 
