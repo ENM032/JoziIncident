@@ -165,3 +165,7 @@ C:\Users\Zozz\source\repos\ST10091324_PROG7312_Part1\obj\Debug\ST10091324_PROG73
 C:\Users\Zozz\source\repos\ST10091324_PROG7312_Part1\obj\Debug\ST100913.59E28068.Up2Date
 C:\Users\Zozz\source\repos\ST10091324_PROG7312_Part1\obj\Debug\ST10091324_PROG7312_Part1.exe
 C:\Users\Zozz\source\repos\ST10091324_PROG7312_Part1\obj\Debug\ST10091324_PROG7312_Part1.pdb
+C:\Users\Zozz\Documents\Side_P\Trae\JoziIncident\ST10091324_PROG7312_Part1\obj\Debug\ST10091324_PROG7312_Part1.csproj.AssemblyReference.cache
+C:\Users\Zozz\Documents\Side_P\Trae\JoziIncident\ST10091324_PROG7312_Part1\obj\Debug\ST10091324_PROG7312_Part1.exe.config
+C:\Users\Zozz\Documents\Side_P\Trae\JoziIncident\ST10091324_PROG7312_Part1\obj\Debug\ST10091324_PROG7312_Part1.exe
+C:\Users\Zozz\Documents\Side_P\Trae\JoziIncident\ST10091324_PROG7312_Part1\obj\Debug\ST10091324_PROG7312_Part1.pdb

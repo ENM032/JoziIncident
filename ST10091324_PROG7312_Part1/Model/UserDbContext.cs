@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data.Entity;
 using System.Linq;
@@ -14,6 +14,11 @@ namespace ST10091324_PROG7312_Part1.Model
         // Constructor specifies the connection string name in App.config or Web.config
         public UserDbContext() : base("name=UserDbContext")
         {
+            // Configure for optimal async operations
+            Configuration.LazyLoadingEnabled = false;
+            Configuration.ProxyCreationEnabled = false;
+            Configuration.AutoDetectChangesEnabled = false;
+            Configuration.ValidateOnSaveEnabled = false;
         }
 
         // DbSet represents the "Users" table in the database

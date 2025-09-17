@@ -1,4 +1,4 @@
-﻿using ST10091324_PROG7312_Part1.Model;
+using ST10091324_PROG7312_Part1.Model;
 using ST10091324_PROG7312_Part1.Views;
 using System;
 using System.Linq;
@@ -27,10 +27,10 @@ namespace ST10091324_PROG7312_Part1
             LoadUserData(UserId);
         }
 
-        private void LoadUserData(Guid userIdentifier)
+        private async void LoadUserData(Guid userIdentifier)
         {
             // Fetch the user from the database
-            var user = GetUserFromDatabase(userIdentifier);
+            var user = await GetUserFromDatabaseAsync(userIdentifier).ConfigureAwait(false);
 
             if (user != null)
             {
@@ -44,13 +44,22 @@ namespace ST10091324_PROG7312_Part1
             }
         }
 
-        private User GetUserFromDatabase(Guid userIdentifier)
+        private async Task<User> GetUserFromDatabaseAsync(Guid userIdentifier)
         {
             using (var context = new UserDbContext())
             {
-                // Query to find the user by username or email
-                return context.Users
-                              .FirstOrDefault(u => u.Id == userIdentifier);
+                try
+                {
+                    // Query to find the user by username or email
+                    return await context.Users
+                                  .FirstOrDefaultAsync(u => u.Id == userIdentifier).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    // Log error and return null for graceful handling
+                    System.Diagnostics.Debug.WriteLine($"Database error in GetUserFromDatabaseAsync: {ex.Message}");
+                    return null;
+                }
             }
         }
 
@@ -179,7 +188,7 @@ namespace ST10091324_PROG7312_Part1
             ShowSearchGrid();
         }
 
-        private void profileHolder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private async void profileHolder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             // The code to initialise and open a file dialog box was taken from a YouTube video
             // Title: Upload and display Image Dynamically in WPF
@@ -199,7 +208,7 @@ namespace ST10091324_PROG7312_Part1
                 string newProfilePicPath = openFileDialog.FileName;
 
                 // Update the profile image in the database
-                UpdateUserProfileImage(newProfilePicPath);
+                await UpdateUserProfileImageAsync(newProfilePicPath).ConfigureAwait(false);
 
                 // Update the profile image in the UI
                 SetProfileImage(newProfilePicPath);
@@ -209,26 +218,35 @@ namespace ST10091324_PROG7312_Part1
             }
         }
 
-        private void UpdateUserProfileImage(string newProfilePicPath)
+        private async Task UpdateUserProfileImageAsync(string newProfilePicPath)
         {
             // Retrieve the user from the database using UserDbContext
             using (var context = new UserDbContext())
             {
-                var user = context.Users
-                                  .FirstOrDefault(u => u.Id == UserId);
-
-                if (user != null)
+                try
                 {
-                    // Update the user's profile image path in the database
-                    user.ProfileImgPath = newProfilePicPath;
+                    var user = await context.Users
+                                      .FirstOrDefaultAsync(u => u.Id == UserId).ConfigureAwait(false);
 
-                    // Save the changes to the database
-                    context.SaveChanges();
+                    if (user != null)
+                    {
+                        // Update the user's profile image path in the database
+                        user.ProfileImgPath = newProfilePicPath;
+
+                        // Save the changes to the database
+                        await context.SaveChangesAsync().ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        // Handle the case where the user is not found in the database
+                        MessageBox.Show("User not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    // Handle the case where the user is not found in the database
-                    MessageBox.Show("User not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    // Log error and show user-friendly message
+                    System.Diagnostics.Debug.WriteLine($"Database error in UpdateUserProfileImageAsync: {ex.Message}");
+                    MessageBox.Show("Error updating profile image. Please try again.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }

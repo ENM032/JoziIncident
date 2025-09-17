@@ -1,4 +1,4 @@
-﻿using ST10091324_PROG7312_Part1.Model;
+using ST10091324_PROG7312_Part1.Model;
 using System;
 using System.Data.Entity;
 using System.Linq;
@@ -58,7 +58,7 @@ namespace ST10091324_PROG7312_Part1.Views
                     {
                         using (var context = new UserDbContext())
                         {
-                            if (context.Users.Any(u => u.Email == email || u.Username == username))
+                            if (await context.Users.AnyAsync(u => u.Email == email || u.Username == username).ConfigureAwait(false))
                             {
                                 MessageTxtBlock.Text = "Email or Username already exists!";
                                 return;
@@ -67,7 +67,7 @@ namespace ST10091324_PROG7312_Part1.Views
                             var newUser = new User(username, email, password, "Customer");
 
                             context.Users.Add(newUser);
-                            await context.SaveChangesAsync();
+                            await context.SaveChangesAsync().ConfigureAwait(false);
                         }
 
                         // The code to get the current instance of the app was taken from C#Corner

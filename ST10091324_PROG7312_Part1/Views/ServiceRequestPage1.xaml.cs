@@ -3,6 +3,7 @@ using ST10091324_PROG7312_Part1.Model;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Data.Entity;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -43,35 +44,67 @@ namespace ST10091324_PROG7312_Part1.Views
         public ServiceRequestPage1(Guid userId)
         {
             InitializeComponent();
-
-            CurrentUser = GetUserFromDatabase(userId);
-            CurrentUserRole = CurrentUser.Role;
-
-            _serviceRequestBST = new ServiceRequestBST();
-            _serviceRequestGraph = new ServiceRequestGraph();
-
-            // Initialize data
-            InitializeServiceRequests();
-
-            // Get the sorted list of service requests from the BST
-            List<ServiceRequest> sortedRequests = _serviceRequestBST.InOrderTraversal(CurrentUser.Id);
-
-            // Convert to ObservableCollection for data binding
-            ServiceRequests = new ObservableCollection<ServiceRequest>(sortedRequests);
-
-            // Bind the ListBox to the ObservableCollection
-            ServiceRequestsList.ItemsSource = ServiceRequests;
-
-            ChangeMessageHeaderTitle();
+            
+            // Initialize async loading
+            _ = InitializePageAsync(userId);
+        }
+        
+        private async Task InitializePageAsync(Guid userId)
+        {
+            try
+            {
+                CurrentUser = await GetUserFromDatabaseAsync(userId).ConfigureAwait(false);
+                
+                // Switch back to UI thread for UI updates
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    CurrentUserRole = CurrentUser?.Role ?? "Guest";
+                    
+                    _serviceRequestBST = new ServiceRequestBST();
+                    _serviceRequestGraph = new ServiceRequestGraph();
+                    
+                    // Initialize data
+                    InitializeServiceRequests();
+                    
+                    // Get the sorted list of service requests from the BST
+                    List<ServiceRequest> sortedRequests = _serviceRequestBST.InOrderTraversal(CurrentUser.Id);
+                    
+                    // Convert to ObservableCollection for data binding
+                    ServiceRequests = new ObservableCollection<ServiceRequest>(sortedRequests);
+                    
+                    // Bind the ListBox to the ObservableCollection
+                    ServiceRequestsList.ItemsSource = ServiceRequests;
+                    
+                    ChangeMessageHeaderTitle();
+                });
+            }
+            catch (Exception ex)
+            {
+                // Handle errors gracefully
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    ShowToast("ERROR", "Failed to load user data. Please try again.");
+                });
+            }
         }
 
-        private User GetUserFromDatabase(Guid userIdentifier)
+        private async Task<User> GetUserFromDatabaseAsync(Guid userIdentifier)
         {
             using (var context = new UserDbContext())
             {
-                // Query to find the user by user id
-                return context.Users
-                              .FirstOrDefault(u => u.Id == userIdentifier);
+                try
+                {
+                    // Query to find the user by user id using async method
+                    return await context.Users
+                                  .FirstOrDefaultAsync(u => u.Id == userIdentifier)
+                                  .ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    // Log error and return null for graceful handling
+                    System.Diagnostics.Debug.WriteLine($"Database error in GetUserFromDatabaseAsync: {ex.Message}");
+                    return null;
+                }
             }
         }
 
